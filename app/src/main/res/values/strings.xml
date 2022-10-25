@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">TZ Music Player</string>
+    <array name="credits">
+        <item>
+            <a href="https://www.flaticon.com/free-icons/music" title="music icons">Music icons
+                created by Freepik - Flaticon
+            </a>
+        </item>
+    </array>
+    <string name="perm_failed_request_again">Storage permission is required to fetch the songs present on your device</string>
+    <string name="perm_failed_redirect_settings">Please grant all permissions from settings to allow the app to function properly</string>
+    <string name="grant_permission">GRANT</string>
+    <string name="dark_mode_key">darkModeKey</string>
+    <string name="licenses_key">licensesKey</string>
+    <string name="about_key">aboutKey</string>
+    <string name="play_song_seq_key">playSongSeqKey</string>
+    <string name="aboutLibraries_description_showIcon">true</string>
+    <string name="aboutLibraries_description_showVersion">true</string>
+    <string name="aboutLibraries_description_text">Libraries used: </string>
+</resources>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <SwitchPreference
+        android:key="@string/dark_mode_key"
+        android:title="Dark Mode"
+        android:summaryOn="Disable Dark Mode"
+        android:summaryOff="Enable Dark Mode" />
+
+    <SwitchPreference
+        android:key="@string/play_song_seq_key"
+        android:title="Play Songs Continuously"
+        android:summaryOn="Disable to stop playback after a song finishes"
+        android:summaryOff="Enable to play songs sequentially on completion" />
+
+    <Preference
+        android:key="@string/licenses_key"
+        android:title="Open-Source Licenses"/>
+
+    <Preference
+        android:key="@string/about_key"
+        android:title="About"
+        android:summary="Application Information" />
+
+</PreferenceScreen>
