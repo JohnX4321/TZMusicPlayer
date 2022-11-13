@@ -15,15 +15,16 @@ import kotlin.random.Random
 
 class SongViewModel(application: Application) : AndroidViewModel(application) {
 
-    private var deviceSongs = MutableLiveData<MutableList<Song>?>()
+    var deviceSongs = MutableLiveData<MutableList<Song>?>()
     private val vmJob = SupervisorJob()
 
     private val handler = CoroutineExceptionHandler{_,e-> deviceSongs.value = null }
     private val uiDispatcher = Dispatchers.Main
     private val IODispatcher = Dispatchers.IO
     private val uiScope = CoroutineScope(uiDispatcher)
-
-    private var songsList = ArrayList<Song>()
+    companion object {
+        var songsList = ArrayList<Song>()
+    }
 
     fun getMusicObserver() = deviceSongs
 

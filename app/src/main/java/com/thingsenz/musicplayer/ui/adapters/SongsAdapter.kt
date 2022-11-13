@@ -14,6 +14,9 @@ import com.thingsenz.musicplayer.utils.Util
 
 class SongsAdapter(private val songsList: List<Song>,private val listener: ItemClickListener): RecyclerView.Adapter<SongsAdapter.SongViewHolder>() {
 
+    companion object {
+
+    }
 
 
     inner class SongViewHolder(view: View): RecyclerView.ViewHolder(view) {
@@ -31,7 +34,7 @@ class SongsAdapter(private val songsList: List<Song>,private val listener: ItemC
                 songImage.setImageBitmap(bitmap)
             else
                 songImage.setImageDrawable(ContextCompat.getDrawable(itemView.context,R.drawable.ic_action_name))
-            songImage.setOnClickListener { listener.onItemClick(song?.path!!) }
+            songImage.setOnClickListener { listener.onItemClick(song?.path!!,absoluteAdapterPosition) }
         }
 
     }
@@ -53,7 +56,7 @@ class SongsAdapter(private val songsList: List<Song>,private val listener: ItemC
     }
 
     interface ItemClickListener {
-        fun onItemClick(path: String)
+        fun onItemClick(path: String,pos: Int)
     }
 
 }

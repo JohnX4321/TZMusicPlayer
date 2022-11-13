@@ -2,8 +2,10 @@ package com.thingsenz.musicplayer.fragments
 
 import android.content.Intent
 import android.media.Image.Plane
+import android.media.audiofx.AudioEffect
 import android.os.Bundle
 import android.view.View
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.SwitchPreference
@@ -37,6 +39,7 @@ class SettingsFragment: PreferenceFragmentCompat() {
         darkModePref.isChecked = Prefs.getInstance().darkMode
         darkModePref.setOnPreferenceChangeListener { _, newValue ->
             Prefs.getInstance().darkMode = newValue as Boolean
+            AppCompatDelegate.setDefaultNightMode(if (newValue==true) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
             true
         }
 
@@ -56,6 +59,15 @@ class SettingsFragment: PreferenceFragmentCompat() {
         playSongSeqPref.isChecked = Prefs.getInstance().playSongsSeq
         playSongSeqPref.setOnPreferenceChangeListener { _, newValue ->
             Prefs.getInstance().playSongsSeq = newValue as Boolean
+            true
+        }
+
+        val eqPref = findPreference<Preference>(getString(R.string.eq_key))!!
+        eqPref.setOnPreferenceClickListener {
+            if (Prefs.getInstance().isSystemEqualizerPresent)
+                startActivity(Intent(AudioEffect.ACTION_DISPLAY_AUDIO_EFFECT_CONTROL_PANEL))
+            else
+                null
             true
         }
 

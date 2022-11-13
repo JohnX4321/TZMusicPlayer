@@ -13,6 +13,10 @@
         android:summaryOff="Enable to play songs sequentially on completion" />
 
     <Preference
+        android:key="@string/eq_key"
+        android:title="Equalizer"/>
+
+    <Preference
         android:key="@string/licenses_key"
         android:title="Open-Source Licenses"/>
 

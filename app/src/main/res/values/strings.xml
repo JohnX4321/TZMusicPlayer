@@ -17,4 +17,5 @@
     <string name="aboutLibraries_description_showIcon">true</string>
     <string name="aboutLibraries_description_showVersion">true</string>
     <string name="aboutLibraries_description_text">Libraries used: </string>
+    <string name="eq_key">Equalizer</string>
 </resources>

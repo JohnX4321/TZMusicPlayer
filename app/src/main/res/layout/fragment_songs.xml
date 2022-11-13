@@ -4,10 +4,64 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <ProgressBar
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:indeterminate="true"
+        android:translationZ="40dp"
+        android:layout_gravity="center"
+        android:foregroundGravity="center"
+        android:id="@+id/progressbar"/>
+
     <androidx.recyclerview.widget.RecyclerView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:id="@+id/recyclerView"
+        android:layout_weight="1"
         xmlns:tools="http://schemas.android.com/tools" />
+
+    <LinearLayout
+        android:layout_gravity="bottom"
+        android:foregroundGravity="bottom"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/miniPlayerView"
+        android:orientation="horizontal"
+        android:elevation="5dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="10dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/miniPlayerName"
+                android:textSize="18sp"
+                android:maxLines="1"
+                android:text="Unknown"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/miniPlayerArtist"
+                android:textSize="15sp"
+                android:text="Unknown"/>
+
+        </LinearLayout>
+
+        <ImageView
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:id="@+id/miniPlayerExpandBtn"
+            android:src="@drawable/ic_up_arrow" />
+
+    </LinearLayout>
 
 </LinearLayout>

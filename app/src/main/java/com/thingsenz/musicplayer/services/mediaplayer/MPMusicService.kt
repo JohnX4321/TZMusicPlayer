@@ -1,6 +1,8 @@
 package com.thingsenz.musicplayer.services.mediaplayer
 
 import android.app.Notification
+import android.app.Notification.Builder
+import android.app.Notification.Style
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -9,18 +11,35 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.BitmapFactory
+import android.graphics.drawable.BitmapDrawable
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
+import android.media.MediaMetadata
 import android.media.MediaPlayer
+import android.media.VolumeShaper
+import android.media.session.MediaSession
+import android.media.session.PlaybackState
 import android.os.Binder
+import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
+import android.support.v4.media.MediaMetadataCompat
+import android.support.v4.media.session.MediaSessionCompat
+import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
 import android.widget.RemoteViews
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import com.thingsenz.musicplayer.MusicApplication
 import com.thingsenz.musicplayer.R
+import com.thingsenz.musicplayer.fragments.SongsFragment
+import com.thingsenz.musicplayer.models.vm.Song
+import com.thingsenz.musicplayer.models.vm.SongViewModel
 import com.thingsenz.musicplayer.utils.AppConst
+import com.thingsenz.musicplayer.utils.Prefs
 import com.thingsenz.musicplayer.utils.Util
 import kotlin.math.ln
 
@@ -29,9 +48,15 @@ class MPMusicService: Service(),MediaPlayer.OnCompletionListener,MediaPlayer.OnP
     private val localbinder = MusicServiceBinder()
     var mediaPlayer: MediaPlayer? = null
     private lateinit var audioManager: AudioManager
-    var mediaFile = ""
-    private var resumePosition = 0
+    var currSong: Song? = null
+    private var resumePosition = 0L
     private var ongoingCall = false
+    private var notifBuilder: NotificationCompat.Builder? = null
+    private var notifView: RemoteViews? = null
+
+    init {
+
+            }
 
     private val NOISY_RECEIVER = object : BroadcastReceiver() {
         override fun onReceive(p0: Context?, p1: Intent?) {
@@ -50,7 +75,7 @@ class MPMusicService: Service(),MediaPlayer.OnCompletionListener,MediaPlayer.OnP
         override fun onReceive(context: Context?, intent: Intent?) {
             if (mediaPlayer?.isPlaying!!) {
                 pausePlayback()
-            } else if (mediaFile!="") {
+            } else {
                 resumePlayback()
             }
             val nm = getSystemService(NotificationManager::class.java)
@@ -65,6 +90,7 @@ class MPMusicService: Service(),MediaPlayer.OnCompletionListener,MediaPlayer.OnP
     private val STOP_ACTION_RECEIVER = object : BroadcastReceiver() {
         override fun onReceive(p0: Context?, p1: Intent?) {
             stopPlayback()
+            stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
     }
@@ -120,47 +146,133 @@ class MPMusicService: Service(),MediaPlayer.OnCompletionListener,MediaPlayer.OnP
             mediaPlayer?.release()
             mediaPlayer=null
         }
+        val nm = getSystemService(NotificationManager::class.java)
+        nm.cancel(199)
+        removeAudioFocus()
         super.onDestroy()
     }
 
     private fun getNotification(): Notification {
-        val nm = getSystemService(NotificationManager::class.java)
-        if (Util.isAtleastO()) {
-            nm.createNotificationChannel(NotificationChannel(AppConst.CHANNEL_ID,AppConst.CHANNEL_NAME,NotificationManager.IMPORTANCE_HIGH))
+        //if (Build.VERSION.SDK_INT>=Build.VERSION_CODES.R)
+            return getNotificationR()
+        /*if (notifView==null) {
+            notifView = RemoteViews(
+                MusicApplication.appContext!!.packageName,
+                R.layout.layout_notification_music_small
+            )
+            notifView!!.setTextViewText(R.id.notifSongName, Util.mediaFile?.displayName)
+            notifView!!.setImageViewBitmap(R.id.notifSongCover, Util.mediaFile?.bitmap)
+            notifView!!.setOnClickPendingIntent(
+                R.id.notifStopBtn,
+                PendingIntent.getBroadcast(
+                    this,
+                    0,
+                    Intent(AppConst.STOP_ACTION),
+                    PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+                )
+            )
+            notifView!!.setOnClickPendingIntent(
+                R.id.notifPreviousBtn, PendingIntent.getBroadcast(
+                    this,
+                    0,
+                    Intent(AppConst.PREV_ACTION),
+                    PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+                )
+            )
+            notifView!!.setOnClickPendingIntent(
+                R.id.notifNextBtn, PendingIntent.getBroadcast(
+                    this,
+                    0,
+                    Intent(AppConst.NEXT_ACTION),
+                    PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+                )
+            )
+            notifView!!.setOnClickPendingIntent(
+                R.id.notifPauseBtn,
+                PendingIntent.getBroadcast(
+                    this,
+                    0,
+                    Intent(AppConst.PLAY_PAUSE_ACTION),
+                    PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+                )
+            )
         }
-        val notifView = RemoteViews(packageName,R.layout.layout_notification_music_small)
-        notifView.setTextViewText(R.id.notifSongName,Util.mediaFile?.displayName)
-        notifView.setImageViewBitmap(R.id.notifSongCover,Util.mediaFile?.bitmap)
-        notifView.setOnClickPendingIntent(R.id.notifStopBtn,PendingIntent.getBroadcast(this,0,Intent(AppConst.STOP_ACTION),PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE))
-        notifView.setOnClickPendingIntent(R.id.notifPreviousBtn, PendingIntent.getBroadcast(this,0,
-            Intent(AppConst.PREV_ACTION),PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
-        ))
-        notifView.setOnClickPendingIntent(R.id.notifNextBtn, PendingIntent.getBroadcast(this,0,
-            Intent(AppConst.NEXT_ACTION),PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
-        ))
+
         if (mediaPlayer==null || mediaPlayer?.isPlaying!!) {
-            notifView.setImageViewResource(R.id.notifPauseBtn,R.drawable.ic_pause)
+            notifView!!.setImageViewResource(R.id.notifPauseBtn,R.drawable.ic_pause)
         } else {
-            notifView.setImageViewResource(R.id.notifPauseBtn,R.drawable.ic_play)
+            notifView!!.setImageViewResource(R.id.notifPauseBtn,R.drawable.ic_play)
         }
-        notifView.setOnClickPendingIntent(R.id.notifPauseBtn, PendingIntent.getBroadcast(this,0,Intent(),PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE))
-        val notif = NotificationCompat.Builder(this,AppConst.CHANNEL_ID)
+
+        notifBuilder = NotificationCompat.Builder(this,AppConst.CHANNEL_ID)
             .setContentTitle("Music Player")
             .setCustomBigContentView(notifView)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setPriority(NotificationCompat.PRIORITY_HIGH).build()
-        return notif
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+        return notifBuilder!!.build()*/
     }
 
+    fun getNotificationR(): Notification {
+        val mediaSession = MediaSessionCompat(this,"PlayerService")
+        mediaSession.setPlaybackState(PlaybackStateCompat.Builder().setActions(PlaybackStateCompat.ACTION_PLAY_PAUSE
+        or PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or PlaybackStateCompat.ACTION_SKIP_TO_NEXT or PlaybackStateCompat.ACTION_SEEK_TO)
+            .setState(if (mediaPlayer==null||mediaPlayer?.isPlaying!!) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,resumePosition,1f,SystemClock.elapsedRealtime()).build())
+        mediaSession.setMetadata(MediaMetadataCompat.fromMediaMetadata(MediaMetadata.Builder().putLong(MediaMetadata.METADATA_KEY_DURATION,currSong?.duration ?: -1L).build()))
+        mediaSession.setCallback(object : MediaSessionCompat.Callback() {
+            override fun onSeekTo(pos: Long) {
+                if (mediaPlayer!=null)
+                    mediaPlayer!!.seekTo(pos.toInt())
+            }
+        })
+        val mediaStyle = androidx.media.app.NotificationCompat.MediaStyle().setMediaSession(mediaSession.sessionToken)
+        notifBuilder = NotificationCompat.Builder(this,AppConst.CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setLargeIcon(currSong?.bitmap?: BitmapFactory.decodeResource(resources,R.drawable.ic_action_name))
+            .setOnlyAlertOnce(true)
+            .setStyle(mediaStyle)
+            .setDeleteIntent(PendingIntent.getBroadcast(this,0,Intent(AppConst.STOP_ACTION),PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE))
+            .setContentText(Util.mediaFile?.displayName)
+            .addAction(NotificationCompat.Action(if (mediaPlayer==null||mediaPlayer?.isPlaying!!) R.drawable.ic_pause else R.drawable.ic_play,"Pause",PendingIntent.getBroadcast(
+                this,
+                0,
+                Intent(AppConst.PLAY_PAUSE_ACTION),
+                PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+            )))
+            .addAction(NotificationCompat.Action(R.drawable.ic_previous,"Previous",PendingIntent.getBroadcast(
+                this,
+                0,
+                Intent(AppConst.PREV_ACTION),
+                PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+            )))
+            .addAction(NotificationCompat.Action(R.drawable.ic_next,"Next",PendingIntent.getBroadcast(
+                this,
+                0,
+                Intent(AppConst.NEXT_ACTION),
+                PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+            )))
+            .addAction(NotificationCompat.Action(R.drawable.ic_stop,"Stop",PendingIntent.getBroadcast(
+                this,
+                0,
+                Intent(AppConst.STOP_ACTION),
+                PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+            )))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+        return notifBuilder!!.build()
+
+    }
+
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (!requestAudioFocus()) stopSelf()
-        if (mediaFile=="") {
-            mediaFile=Util.mediaFile?.path?: ""
+        if (!requestAudioFocus()) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
         }
-        if (mediaFile!="") {
-            initPlayer()
-            startPlayback()
-        }
+        if (currSong==null)
+            currSong=Util.mediaFile
+        startForeground(199, getNotification())
+        initPlayer()
+        startPlayback()
+        registerBtnReceivers()
         Log.d("TZMP","SERVICE STARTED")
         return START_STICKY
     }
@@ -171,8 +283,20 @@ class MPMusicService: Service(),MediaPlayer.OnCompletionListener,MediaPlayer.OnP
 
     override fun onCompletion(p0: MediaPlayer?) {
         //playback completed
-        stopPlayback()
-        stopSelf()
+        if (!Prefs.getInstance().playSongsSeq) {
+            stopPlayback()
+            stopSelf()
+        } else {
+            Util.mediaFile = SongViewModel.songsList[if (SongsFragment.position>SongViewModel.songsList.size) 0 else SongsFragment.apply { position+=1 }.position]//next
+            val newMP = initPlayerInternal()
+            mediaPlayer?.setNextMediaPlayer(newMP)
+            mediaPlayer?.release()
+            mediaPlayer = newMP
+        }
+    }
+
+    fun setNextSong(path: String) {
+
     }
 
     override fun onError(p0: MediaPlayer?, p1: Int, p2: Int): Boolean {
@@ -205,36 +329,40 @@ class MPMusicService: Service(),MediaPlayer.OnCompletionListener,MediaPlayer.OnP
     }
 
     fun initPlayer() {
-        mediaPlayer = MediaPlayer().apply {
+        mediaPlayer=initPlayerInternal()
+    }
+
+    private fun initPlayerInternal(): MediaPlayer {
+         return MediaPlayer().apply {
+             reset()
             setOnCompletionListener(this@MPMusicService)
             setOnErrorListener(this@MPMusicService)
             setOnPreparedListener(this@MPMusicService)
             setOnBufferingUpdateListener(this@MPMusicService)
             setOnSeekCompleteListener(this@MPMusicService)
             setOnInfoListener(this@MPMusicService)
-            reset()
-            setVolume(getVolume(),getVolume())
-            setAudioAttributes(AudioAttributes.Builder().setFlags(AudioManager.STREAM_MUSIC).build())
-        }
-        if (mediaFile=="") {
-            mediaFile=Util.mediaFile?.path?: ""
-        }
-        try {
-            mediaPlayer?.setDataSource(mediaFile)
-            mediaPlayer?.prepareAsync()
-        } catch (e: Exception){
-            e.printStackTrace()
-            stopSelf()
+            //setVolume(getVolume(),getVolume())
+            //setAudioAttributes(AudioAttributes.Builder().setFlags(AudioManager.STREAM_MUSIC).setUsage(AudioAttributes.USAGE_MEDIA).build())
+             if (currSong!=Util.mediaFile) {
+                currSong=Util.mediaFile
+             }
+             try {
+                 setDataSource(currSong!!.path)
+                 prepare()
+             } catch (e: Exception){
+                 e.printStackTrace()
+                 stopSelf()
+             }
         }
     }
 
     private fun requestAudioFocus(): Boolean {
         audioManager = getSystemService(AudioManager::class.java)
         val res = if (Util.isAtleastO())
-            audioManager.requestAudioFocus(AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN).setAudioAttributes(AudioAttributes.Builder().setFlags(AudioManager.STREAM_MUSIC).build()).setOnAudioFocusChangeListener(this).build())
+            audioManager.requestAudioFocus(AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN).setAudioAttributes(AudioAttributes.Builder().setFlags(AudioManager.STREAM_MUSIC).setUsage(AudioAttributes.USAGE_MEDIA).build()).setOnAudioFocusChangeListener(this).build())
         else
             audioManager.requestAudioFocus(this,AudioManager.STREAM_MUSIC,AudioManager.AUDIOFOCUS_GAIN)
-        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC,0, AudioManager.FLAG_SHOW_UI + AudioManager.FLAG_PLAY_SOUND)
+        //audioManager.setStreamVolume(AudioManager.STREAM_MUSIC,0,  AudioManager.FLAG_PLAY_SOUND)
         return res==AudioManager.AUDIOFOCUS_REQUEST_GRANTED
     }
 
@@ -255,13 +383,13 @@ class MPMusicService: Service(),MediaPlayer.OnCompletionListener,MediaPlayer.OnP
     fun pausePlayback() {
         if (mediaPlayer!!.isPlaying) {
             mediaPlayer!!.pause()
-            resumePosition = mediaPlayer!!.currentPosition
+            resumePosition = mediaPlayer!!.currentPosition.toLong()
         }
     }
 
     fun resumePlayback() {
         if (!mediaPlayer!!.isPlaying) {
-            mediaPlayer!!.seekTo(resumePosition)
+            mediaPlayer!!.seekTo(resumePosition.toInt())
             mediaPlayer!!.start()
         }
     }
