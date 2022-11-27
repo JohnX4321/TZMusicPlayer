@@ -19,6 +19,9 @@ import com.thingsenz.musicplayer.MainActivity
 import com.thingsenz.musicplayer.models.vm.Song
 import java.io.File
 import java.io.FileDescriptor
+import java.text.SimpleDateFormat
+import java.util.*
+import java.util.concurrent.TimeUnit
 
 object Util {
 
@@ -108,7 +111,25 @@ object Util {
         else -> activity.shouldShowRequestPermissionRationale(Manifest.permission.READ_EXTERNAL_STORAGE)
     }
 
-    fun getCintentUri(id: Long) = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,id)
+    fun getContentUri(id: Long) = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,id)
 
+    enum class RepeatMode {
+        REPEAT_ONCE,
+        REPEAT_OFF
+    }
+
+    fun getFormattedTime(duration: Long) : String {
+        val hours = TimeUnit.MILLISECONDS.toHours(duration).toInt() % 24
+        val minutes = TimeUnit.MILLISECONDS.toMinutes(duration).toInt() % 60
+        val seconds = TimeUnit.MILLISECONDS.toSeconds(duration).toInt() % 60
+        return when {
+            hours > 0 -> String.format("%d:%02d:%02d", hours, minutes, seconds)
+            minutes > 0 -> String.format("%02d:%02d", minutes, seconds)
+            seconds > 0 -> String.format("00:%02d", seconds)
+            else -> {
+                "00:00"
+            }
+        }
+    }
 
 }

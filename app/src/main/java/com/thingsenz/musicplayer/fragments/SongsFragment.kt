@@ -14,6 +14,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.replace
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -56,7 +57,6 @@ class SongsFragment: Fragment(), SongsAdapter.ItemClickListener {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        Log.d("TZMP","FRag created")
         return LayoutInflater.from(context).inflate(R.layout.fragment_songs,container,false)
     }
 
@@ -68,7 +68,6 @@ class SongsFragment: Fragment(), SongsAdapter.ItemClickListener {
         progressBar.visibility = View.VISIBLE
         vm.getMusicObserver().observe(viewLifecycleOwner) {
             songsList = it
-            Log.d("TZMP",songsList?.size.toString())
             val adapter = SongsAdapter(songsList?: emptyList(),this)
             adapter.setHasStableIds(true)
             recyclerView.layoutManager = LinearLayoutManager(activity)
@@ -84,9 +83,11 @@ class SongsFragment: Fragment(), SongsAdapter.ItemClickListener {
         miniPlayerSongArtist = view.findViewById(R.id.miniPlayerArtist)
         miniPlayerExpandBtn = view.findViewById(R.id.miniPlayerExpandBtn)
         miniPlayerExpandBtn.setOnClickListener {
-            childFragmentManager.beginTransaction()
-                .add(PlayerFragment.getInstance(),"PLAYER")
-                .commit()
+            if (Util.mediaFile!=null) {
+                childFragmentManager.beginTransaction()
+                    .add(PlayerFragment.getInstance(), "PLAYER")
+                    .commit()
+            }
         }
     }
 

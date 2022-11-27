@@ -52,11 +52,8 @@ class MPMusicService: Service(),MediaPlayer.OnCompletionListener,MediaPlayer.OnP
     private var resumePosition = 0L
     private var ongoingCall = false
     private var notifBuilder: NotificationCompat.Builder? = null
-    private var notifView: RemoteViews? = null
 
-    init {
 
-            }
 
     private val NOISY_RECEIVER = object : BroadcastReceiver() {
         override fun onReceive(p0: Context?, p1: Intent?) {
@@ -84,7 +81,12 @@ class MPMusicService: Service(),MediaPlayer.OnCompletionListener,MediaPlayer.OnP
     }
 
     private fun playNextSong() {
-
+        SongsFragment.position+=1
+        Util.mediaFile = SongViewModel.songsList[SongsFragment.position]
+        currSong = Util.mediaFile
+        startForeground(199, getNotification())
+        initPlayer()
+        startPlayback()
     }
 
     private val STOP_ACTION_RECEIVER = object : BroadcastReceiver() {
@@ -102,7 +104,14 @@ class MPMusicService: Service(),MediaPlayer.OnCompletionListener,MediaPlayer.OnP
     }
 
     private fun playPrevSong() {
-
+        if (SongsFragment.position!=0)
+            SongsFragment.position-=1
+        else
+            SongsFragment.position = SongViewModel.songsList.lastIndex
+        Util.mediaFile = SongViewModel.songsList[SongsFragment.position]
+        startForeground(199, getNotification())
+        initPlayer()
+        startPlayback()
     }
 
     private fun registerNoisyReceiver() {
@@ -332,7 +341,7 @@ class MPMusicService: Service(),MediaPlayer.OnCompletionListener,MediaPlayer.OnP
         mediaPlayer=initPlayerInternal()
     }
 
-    private fun initPlayerInternal(): MediaPlayer {
+    public fun initPlayerInternal(): MediaPlayer {
          return MediaPlayer().apply {
              reset()
             setOnCompletionListener(this@MPMusicService)
