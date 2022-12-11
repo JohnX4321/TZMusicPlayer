@@ -42,7 +42,7 @@ class PermissionDeniedFragment: Fragment() {
         val imageView = view.findViewById<ImageView>(R.id.permImage)
         val textView = view.findViewById<TextView>(R.id.permText)
         val grantBtn = view.findViewById<AppCompatButton>(R.id.permButton)
-        imageView.setImageDrawable(ContextCompat.getDrawable(view.context,0))
+        //imageView.setImageDrawable(ContextCompat.getDrawable(view.context,0))
         textView.text = if (Util.shouldShowRationale(requireActivity())) getString(R.string.perm_failed_request_again) else getString(R.string.perm_failed_redirect_settings)
         grantBtn.setOnClickListener {
             if (Util.shouldShowRationale(requireActivity()))

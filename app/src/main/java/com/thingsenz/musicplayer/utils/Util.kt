@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.ContentUris
 import android.content.Context
+import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -15,6 +16,7 @@ import android.provider.MediaStore
 import android.util.Log
 import android.util.Size
 import androidx.annotation.RequiresApi
+import androidx.core.app.ActivityCompat
 import com.thingsenz.musicplayer.MainActivity
 import com.thingsenz.musicplayer.models.vm.Song
 import java.io.File
@@ -88,7 +90,6 @@ object Util {
             val uri = ContentUris.withAppendedId(MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,albumId)
             context.contentResolver.loadThumbnail(uri,Size(64,64),null)
         } catch (e: Exception) {
-            e.printStackTrace()
             null
         }
     }
@@ -105,6 +106,11 @@ object Util {
         isAtleastR() -> PERMISSION_LIST
         else -> PERMISSION_LIST
     }
+
+    fun isPermissionGranted(context: Context) = when {
+        isAtleastT() -> ActivityCompat.checkSelfPermission(context,Manifest.permission.READ_MEDIA_AUDIO)
+        else -> ActivityCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE)
+    } == PackageManager.PERMISSION_GRANTED
 
     fun shouldShowRationale(activity: Activity) = when {
         isAtleastT() -> activity.shouldShowRequestPermissionRationale(Manifest.permission.READ_MEDIA_AUDIO)

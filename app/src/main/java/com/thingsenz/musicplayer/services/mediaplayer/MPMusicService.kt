@@ -64,6 +64,7 @@ class MPMusicService: Service(),MediaPlayer.OnCompletionListener,MediaPlayer.OnP
 
     private val NEXT_ACTION_RECEIVER = object : BroadcastReceiver() {
         override fun onReceive(p0: Context?, p1: Intent?) {
+            stopPlayback()
             playNextSong()
         }
     }
@@ -81,12 +82,16 @@ class MPMusicService: Service(),MediaPlayer.OnCompletionListener,MediaPlayer.OnP
     }
 
     private fun playNextSong() {
+        if (SongsFragment.position!=SongViewModel.songsList.lastIndex)
         SongsFragment.position+=1
+        else
+            SongsFragment.position=0
         Util.mediaFile = SongViewModel.songsList[SongsFragment.position]
         currSong = Util.mediaFile
-        startForeground(199, getNotification())
+        /*startForeground(199, getNotification())
         initPlayer()
-        startPlayback()
+        startPlayback()*/
+        startService(Intent(this,MPMusicService::class.java))
     }
 
     private val STOP_ACTION_RECEIVER = object : BroadcastReceiver() {
@@ -99,6 +104,7 @@ class MPMusicService: Service(),MediaPlayer.OnCompletionListener,MediaPlayer.OnP
 
     private val PREV_ACTION_RECEIVER = object : BroadcastReceiver() {
         override fun onReceive(p0: Context?, p1: Intent?) {
+            stopPlayback()
             playPrevSong()
         }
     }
@@ -109,9 +115,10 @@ class MPMusicService: Service(),MediaPlayer.OnCompletionListener,MediaPlayer.OnP
         else
             SongsFragment.position = SongViewModel.songsList.lastIndex
         Util.mediaFile = SongViewModel.songsList[SongsFragment.position]
-        startForeground(199, getNotification())
+        /*startForeground(199, getNotification())
         initPlayer()
-        startPlayback()
+        startPlayback()*/
+        startService(Intent(this,MPMusicService::class.java))
     }
 
     private fun registerNoisyReceiver() {
@@ -224,13 +231,38 @@ class MPMusicService: Service(),MediaPlayer.OnCompletionListener,MediaPlayer.OnP
     fun getNotificationR(): Notification {
         val mediaSession = MediaSessionCompat(this,"PlayerService")
         mediaSession.setPlaybackState(PlaybackStateCompat.Builder().setActions(PlaybackStateCompat.ACTION_PLAY_PAUSE
-        or PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or PlaybackStateCompat.ACTION_SKIP_TO_NEXT or PlaybackStateCompat.ACTION_SEEK_TO)
+        or PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or PlaybackStateCompat.ACTION_SKIP_TO_NEXT or PlaybackStateCompat.ACTION_SEEK_TO or PlaybackStateCompat.ACTION_STOP)
             .setState(if (mediaPlayer==null||mediaPlayer?.isPlaying!!) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,resumePosition,1f,SystemClock.elapsedRealtime()).build())
         mediaSession.setMetadata(MediaMetadataCompat.fromMediaMetadata(MediaMetadata.Builder().putLong(MediaMetadata.METADATA_KEY_DURATION,currSong?.duration ?: -1L).build()))
         mediaSession.setCallback(object : MediaSessionCompat.Callback() {
             override fun onSeekTo(pos: Long) {
                 if (mediaPlayer!=null)
                     mediaPlayer!!.seekTo(pos.toInt())
+            }
+
+            override fun onPause() {
+                if (Util.isAtleastT())
+                sendBroadcast(Intent(AppConst.PLAY_PAUSE_ACTION))
+            }
+
+            override fun onPlay() {
+                if (Util.isAtleastT())
+                sendBroadcast(Intent(AppConst.PLAY_PAUSE_ACTION))
+            }
+
+            override fun onSkipToNext() {
+                if (Util.isAtleastT())
+                sendBroadcast(Intent(AppConst.NEXT_ACTION))
+            }
+
+            override fun onSkipToPrevious() {
+                if (Util.isAtleastT())
+                sendBroadcast(Intent(AppConst.PREV_ACTION))
+            }
+
+            override fun onStop() {
+                if (Util.isAtleastT())
+                sendBroadcast(Intent(AppConst.STOP_ACTION))
             }
         })
         val mediaStyle = androidx.media.app.NotificationCompat.MediaStyle().setMediaSession(mediaSession.sessionToken)
@@ -241,30 +273,38 @@ class MPMusicService: Service(),MediaPlayer.OnCompletionListener,MediaPlayer.OnP
             .setStyle(mediaStyle)
             .setDeleteIntent(PendingIntent.getBroadcast(this,0,Intent(AppConst.STOP_ACTION),PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE))
             .setContentText(Util.mediaFile?.displayName)
-            .addAction(NotificationCompat.Action(if (mediaPlayer==null||mediaPlayer?.isPlaying!!) R.drawable.ic_pause else R.drawable.ic_play,"Pause",PendingIntent.getBroadcast(
-                this,
+            .apply {
+                if (!Util.isAtleastT()) {
+                addAction(NotificationCompat.Action(if (mediaPlayer==null||mediaPlayer?.isPlaying!!) R.drawable.ic_pause else R.drawable.ic_play,"Pause",PendingIntent.getBroadcast(
+                this@MPMusicService,
                 0,
                 Intent(AppConst.PLAY_PAUSE_ACTION),
                 PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
             )))
-            .addAction(NotificationCompat.Action(R.drawable.ic_previous,"Previous",PendingIntent.getBroadcast(
-                this,
+            addAction(NotificationCompat.Action(R.drawable.ic_previous,"Previous",PendingIntent.getBroadcast(
+                this@MPMusicService,
                 0,
                 Intent(AppConst.PREV_ACTION),
                 PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
             )))
-            .addAction(NotificationCompat.Action(R.drawable.ic_next,"Next",PendingIntent.getBroadcast(
-                this,
+            addAction(NotificationCompat.Action(R.drawable.ic_next,"Next",PendingIntent.getBroadcast(
+                this@MPMusicService,
                 0,
                 Intent(AppConst.NEXT_ACTION),
                 PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
             )))
-            .addAction(NotificationCompat.Action(R.drawable.ic_stop,"Stop",PendingIntent.getBroadcast(
+            addAction(NotificationCompat.Action(R.drawable.ic_stop,"Stop",PendingIntent.getBroadcast(
+                this@MPMusicService,
+                0,
+                Intent(AppConst.STOP_ACTION),
+                PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+            ))) }
+            }.setDeleteIntent(PendingIntent.getBroadcast(
                 this,
                 0,
                 Intent(AppConst.STOP_ACTION),
                 PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
-            )))
+            ))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
         return notifBuilder!!.build()
 
@@ -279,9 +319,9 @@ class MPMusicService: Service(),MediaPlayer.OnCompletionListener,MediaPlayer.OnP
         if (currSong==null)
             currSong=Util.mediaFile
         startForeground(199, getNotification())
+        registerBtnReceivers()
         initPlayer()
         startPlayback()
-        registerBtnReceivers()
         Log.d("TZMP","SERVICE STARTED")
         return START_STICKY
     }

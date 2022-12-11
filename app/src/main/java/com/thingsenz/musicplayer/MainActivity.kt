@@ -29,7 +29,7 @@ import com.thingsenz.musicplayer.utils.Util
 class MainActivity : AppCompatActivity() {
 
     val permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { res ->
-        if (res[android.Manifest.permission.READ_EXTERNAL_STORAGE] == true) {
+        if ((Util.isAtleastT()&&res[android.Manifest.permission.READ_MEDIA_AUDIO]==true) || (res[android.Manifest.permission.READ_EXTERNAL_STORAGE] == true)) {
             launchMusicFragment()
         } else {
             val permFailFragment = PermissionDeniedFragment.getInstance()
@@ -66,7 +66,7 @@ class MainActivity : AppCompatActivity() {
         else {
             AppCompatDelegate.setDefaultNightMode(MODE_NIGHT_NO)
         }
-        if (ActivityCompat.checkSelfPermission(this,android.Manifest.permission.READ_EXTERNAL_STORAGE)==PackageManager.PERMISSION_GRANTED) {
+        if (Util.isPermissionGranted(this)) {
             launchMusicFragment()
         } else {
             permissionLauncher.launch(Util.getPermissionList())
